@@ -1,19 +1,50 @@
 #include <QCoreApplication>
+#include <QDebug>
+#include "folderscanner.h"
+
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    // Set up code that uses the Qt event loop here.
-    // Call a.quit() or a.exit() to quit the application.
-    // A not very useful example would be including
-    // #include <QTimer>
-    // near the top of the file and calling
-    // QTimer::singleShot(5000, &a, &QCoreApplication::quit);
-    // which quits the application after 5 seconds.
+    if (argc != 4)
+    {
+        qInfo() << "Использование: <шифрование/расшифрование> <путь к папке> <пароль>";
+        return 1;
+    }
 
-    // If you do not need a running Qt event loop, remove the call
-    // to a.exec() or use the Non-Qt Plain C++ Application template.
+    QString mode = QString(argv[1]).toLower();
+    QString folderPath = QString(argv[2]);
+    QString password = QString(argv[3]);
 
-    return a.exec();
+    bool encryptMode;
+    if (mode == "шифрование")
+    {
+        encryptMode = true;
+    }
+    else if (mode == "расшифрование")
+    {
+        encryptMode = false;
+    }
+    else
+    {
+        qCritical() << "не правильно выбран режим";
+        return 1;
+    }
+
+    QByteArray key = CryptoManager::getInstance().keyFromPassword(password);
+
+    FolderScanner scanner;
+    bool result = scanner.processDirecoryr(folderPath, key, encryptMode);
+
+    if (result)
+    {
+        qInfo() << "операция выполнена успешно";
+        return 0;
+    }
+    else
+    {
+        qCritical() << "операция выполнена с ошибками";
+        return 1;
+    }
 }
