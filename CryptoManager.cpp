@@ -1,4 +1,4 @@
-#include "cryptomanager.h"
+#include "CryptoManager.h"
 #include <fstream>
 #include <iostream>
 
