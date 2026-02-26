@@ -15,6 +15,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 add_executable(lb1
   main.cpp
   folderscanner.h folderscanner.cpp
+  cryptomanager.h cryptomanager.cpp
 )
 target_link_libraries(lb1 PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 

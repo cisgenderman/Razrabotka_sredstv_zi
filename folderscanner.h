@@ -1,10 +1,23 @@
 #ifndef FOLDERSCANNER_H
 #define FOLDERSCANNER_H
 
-class FolderScanner
+#include <QObject>
+#include <qbytearray>
+
+class FolderScanner : public QObject
 {
+    Q_OBJECT
 public:
-    FolderScanner();
+    explicit FolderScanner(QObject *parent = nullptr);
+
+    bool processDirecoryr(const QString &dirPath, const QByteArray &key, bool encryptMode);
+
+signals:
+    void fileProcessed(const QString &fileName, bool success);
+    void directoryEntered(const QString &dirName);
+
+private:
+    bool processsDirectoryRecursive(const QString &dirPath, const QByteArray &key, bool encryptMode);
 };
 
 #endif // FOLDERSCANNER_H
