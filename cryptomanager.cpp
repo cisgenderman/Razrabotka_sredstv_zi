@@ -1,55 +1,78 @@
 #include "cryptomanager.h"
+#include <fstream>
+#include <iostream>
 
-cryptomanager* cryptomanager::instance = nullptr;
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/sha.h>
+#include <cryptopp/files.h>
+#include <cryptopp/secblock.h>
 
-cryptomanager::cryptomanager(QObject *parent) :QObject(parent)
+using namespace CryptoPP;
+
+CryptoManager& CryptoManager::getInstance();
 {
-    qDebug() << "Крипто создан";
-}
-
-cryptomanager* cryptomanager::getInstance();
-{
-    if (instance == nullptr)
-    {
-        instance = new cryptomanager();
-    }
+    static CryptoManager instance;
     return instance;
 }
 
-QByteArray cryptomanager::encrypt(const QByteArray &data, const QByteArray &key)
-{
-    if (key.isEmpty())
-    {
-        return data;
+QByteArray CryptoManager::keyFromPassword(const QString &password) {
+    // Преобразуем пароль в байтовый массив
+    std::string pass = password.toStdString();
+    SecByteBlock key(AES::DEFAULT_KEYLENGTH); // 256 бит = 32 байта
+
+    // Используем SHA-256 для получения ключа фиксированной длины из пароля
+    SHA256().CalculateDigest(key, reinterpret_cast<const byte*>(pass.data()), pass.size());
+
+    return QByteArray(reinterpret_cast<const char*>(key.data()), key.size());
+}
+
+bool CryptoManager::processAES(const QString &inputFilePath, const QString &outputFilePath,
+                               const QByteArray &key, bool forEncryption) {
+    try {
+        std::string inFile = inputFilePath.toStdString();
+        std::string outFile = outputFilePath.toStdString();
+
+        // Устанавливаем ключ и вектор инициализации (IV)
+        // Внимание: В реальных проектах IV должен быть случайным и сохраняться!
+        // Для упрощения лабораторной используем фиксированный IV (небезопасно!)
+        byte iv[AES::BLOCKSIZE] = {0}; // В реальности должен быть случайным
+
+        SecByteBlock keyBlock(reinterpret_cast<const byte*>(key.data()), key.size());
+
+        if (forEncryption) {
+            // Шифрование
+            CBC_Mode<AES>::Encryption encryptor;
+            encryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
+
+            FileSource fs(inFile.c_str(), true,
+                          new StreamTransformationFilter(encryptor,
+                                                         new FileSink(outFile.c_str())
+                                                         )
+                          );
+        } else {
+            // Дешифрование
+            CBC_Mode<AES>::Decryption decryptor;
+            decryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
+
+            FileSource fs(inFile.c_str(), true,
+                          new StreamTransformationFilter(decryptor,
+                                                         new FileSink(outFile.c_str())
+                                                         )
+                          );
+        }
+        return true;
+    } catch (const CryptoPP::Exception& e) {
+        std::cerr << "Crypto++ error: " << e.what() << std::endl;
+        return false;
     }
-
-    QByteArray result = data;
-    int keySize = key.size();
-
-    for (int i = 0; i<result.size(); i++)
-    {
-        result[i] = result[i] ^ key[i % keySize];
-    }
-    return result;
 }
 
-QByteArray cryptomanager::decrypt(const QString &data, const QString &key)
-{
-    return encrypt(data, key);
+bool CryptoManager::encryptFile(const QString &inputFilePath, const QString &outputFilePath, const QByteArray &key) {
+    return processAES(inputFilePath, outputFilePath, key, true);
 }
 
-QString cryptomanager::encryptString(const QString &text, const QString &key)
-{
-    QByteArray data = text.toUtf8();
-    QByteArray keyData = key.toUtf8();
-    QByteArray encrypted = encrypt(data, keyData);
-    return QString::fromUtf8(encrypted.toBase64());
-}
-
-QString cryptomanager::decryptString(const QString &cipher, const QString &key)
-{
-    QByteArray data = QByteArray::fromBase64((cipher.toUtf8()));
-    QByteArray keyData = key.toUtf8();
-    QByteArray decrypted = decrypt(data, keyData);
-    return QString::fromUtf8(decrypted);
+bool CryptoManager::decryptFile(const QString &inputFilePath, const QString &outputFilePath, const QByteArray &key) {
+    return processAES(inputFilePath, outputFilePath, key, false);
 }
