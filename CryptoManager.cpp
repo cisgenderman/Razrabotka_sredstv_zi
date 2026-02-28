@@ -11,13 +11,14 @@
 
 using namespace CryptoPP;
 
-CryptoManager& CryptoManager::getInstance();
+CryptoManager& CryptoManager::getInstance()
 {
     static CryptoManager instance;
     return instance;
 }
 
-QByteArray CryptoManager::keyFromPassword(const QString &password) {
+QByteArray CryptoManager::keyFromPassword(const QString &password)
+{
     // Преобразуем пароль в байтовый массив
     std::string pass = password.toStdString();
     SecByteBlock key(AES::DEFAULT_KEYLENGTH); // 256 бит = 32 байта

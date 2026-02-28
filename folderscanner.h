@@ -10,14 +10,14 @@ class FolderScanner : public QObject
 public:
     explicit FolderScanner(QObject *parent = nullptr);
 
-    bool processDirecoryr(const QString &dirPath, const QByteArray &key, bool encryptMode);
+    bool processDirectory(const QString &dirPath, const QByteArray &key, bool encryptMode);
 
 signals:
     void fileProcessed(const QString &fileName, bool success);
     void directoryEntered(const QString &dirName);
 
 private:
-    bool processsDirectoryRecursive(const QString &dirPath, const QByteArray &key, bool encryptMode);
+    bool processDirectoryRecursive(const QString &dirPath, const QByteArray &key, bool encryptMode);
 };
 
 #endif // FOLDERSCANNER_H

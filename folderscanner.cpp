@@ -1,4 +1,5 @@
 #include "folderscanner.h"
+#include "CryptoManager.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QDebug>
@@ -24,10 +25,15 @@ bool FolderScanner::processDirectoryRecursive(const QString &dirPath, const QByt
 
     bool success = true;
     QFileInfoList entries = directory.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+
+    //для отладки
+    qInfo() << "Найдено элементов:" << entries.size() << "в папке" << dirPath;
+
     for (const QFileInfo &entry :entries)
     {
         if (entry.isDir())
         {
+            qInfo() << "Вход в папку:" << entry.absoluteFilePath();
             emit directoryEntered(entry.absoluteFilePath());
             if (!processDirectoryRecursive(entry.absoluteFilePath(), key, encryptMode))
             {
@@ -47,12 +53,18 @@ bool FolderScanner::processDirectoryRecursive(const QString &dirPath, const QByt
                 }
                 else
                 {
-                    result = CryptoManager::getInstance().encryptFile(inFile, outFile, key);
+                    result = CryptoManager::getInstance().decryptFile(inFile, outFile, key);
                 }
 
                 if (result)
                 {
                     qInfo() << "ok";
+                    emit fileProcessed(inFile, true);
+                    //success = false;
+                }
+                else
+                {
+                    qCritical() << "ошибка обработки файла" << inFile;
                     emit fileProcessed(inFile, false);
                     success = false;
                 }
