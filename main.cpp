@@ -66,5 +66,6 @@ int main(int argc, char *argv[])
             std::cout << "erorr!\n";
         }
     }
+    a.quit();
     return 0;
 }

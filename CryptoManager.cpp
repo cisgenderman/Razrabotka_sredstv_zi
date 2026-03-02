@@ -46,10 +46,9 @@ bool CryptoManager::processAES(const QString &inputFilePath, const QString &outp
     std::cout << "DEBUG: output file: " << outputFilePath.toStdString() << std::endl;
     std::cout << "DEBUG: key size: " << key.size() << std::endl;
 
+    QString tempFile = inputFilePath + ".tmp";
     try {
         std::string inFile = inputFilePath.toStdString();
-        //std::string outFile = outputFilePath.toStdString();
-        QString tempFile = inputFilePath + ".tmp";
         std::string tempFileStr = tempFile.toStdString();
 
 
@@ -64,8 +63,6 @@ bool CryptoManager::processAES(const QString &inputFilePath, const QString &outp
         SecByteBlock keyBlock(reinterpret_cast<const byte*>(key.data()), key.size());
 
         std::cout << "DEBUG: Starting Crypto++ operation..." << std::endl;
-        //временый файл
-        //std::string tempFile = outFile + ".tmp";
 
         if (forEncryption)
         {
@@ -97,24 +94,40 @@ bool CryptoManager::processAES(const QString &inputFilePath, const QString &outp
         {
             QFile::remove(inputFilePath);
             QFile::rename(tempFile, inputFilePath);
-            std::cout << "DEBUG: File replaced successfully" << std::endl;
         }
         else
         {
-            std::cout << "DEBUG: Temp file not created!" << std::endl;
             return false;
         }
 
         return true;
 
-    } catch (const CryptoPP::Exception& e) {
+    }
+    catch (const CryptoPP::Exception& e)
+    {
         std::cout << "DEBUG: Crypto++ error: " << e.what() << std::endl;
+        if (QFile::exists(tempFile))
+        {
+            QFile::remove(tempFile);
+        }
         return false;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         std::cout << "DEBUG: std exception: " << e.what() << std::endl;
+        if (QFile::exists(tempFile))
+        {
+            QFile::remove(tempFile);
+        }
         return false;
-    } catch (...) {
+    }
+    catch (...)
+    {
         std::cout << "DEBUG: Unknown exception" << std::endl;
+        if (QFile::exists(tempFile))
+        {
+            QFile::remove(tempFile);
+        }
         return false;
     }
 }
