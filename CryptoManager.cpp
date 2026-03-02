@@ -1,4 +1,5 @@
 #include "CryptoManager.h"
+#include <QFile>
 #include <fstream>
 #include <iostream>
 #include <QCryptographicHash>
@@ -47,42 +48,63 @@ bool CryptoManager::processAES(const QString &inputFilePath, const QString &outp
 
     try {
         std::string inFile = inputFilePath.toStdString();
-        std::string outFile = outputFilePath.toStdString();
+        //std::string outFile = outputFilePath.toStdString();
+        QString tempFile = inputFilePath + ".tmp";
+        std::string tempFileStr = tempFile.toStdString();
+
 
         // Проверяем, существует ли входной файл
-        std::ifstream test(inFile);
-        if (!test.good()) {
+        if (!QFile::exists(inputFilePath))
+        {
             std::cout << "DEBUG: Input file does not exist!" << std::endl;
             return false;
         }
-        test.close();
 
         byte iv[AES::BLOCKSIZE] = {0};
         SecByteBlock keyBlock(reinterpret_cast<const byte*>(key.data()), key.size());
 
         std::cout << "DEBUG: Starting Crypto++ operation..." << std::endl;
+        //временый файл
+        //std::string tempFile = outFile + ".tmp";
 
-        if (forEncryption) {
+        if (forEncryption)
+        {
             CBC_Mode<AES>::Encryption encryptor;
             encryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
 
             FileSource fs(inFile.c_str(), true,
                           new StreamTransformationFilter(encryptor,
-                                                         new FileSink(outFile.c_str())
+                                                         new FileSink(tempFileStr.c_str())
                                                          )
                           );
-        } else {
+        }
+        else
+        {
             CBC_Mode<AES>::Decryption decryptor;
             decryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
 
             FileSource fs(inFile.c_str(), true,
                           new StreamTransformationFilter(decryptor,
-                                                         new FileSink(outFile.c_str())
+                                                         new FileSink(tempFileStr.c_str())
                                                          )
                           );
         }
 
         std::cout << "DEBUG: Crypto++ operation completed" << std::endl;
+
+        // Заменяем исходный файл зашифрованным
+        if (QFile::exists(tempFile))
+        {
+            QFile::remove(inputFilePath);
+            QFile::rename(tempFile, inputFilePath);
+            std::cout << "DEBUG: File replaced successfully" << std::endl;
+        }
+        else
+        {
+            std::cout << "DEBUG: Temp file not created!" << std::endl;
+            return false;
+        }
+
         return true;
 
     } catch (const CryptoPP::Exception& e) {
