@@ -1,19 +1,70 @@
 #include <QCoreApplication>
+#include <QDebug>
+#include "folderscanner.h"
+#include "CryptoManager.h"
+#include <iostream>
+
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    // Set up code that uses the Qt event loop here.
-    // Call a.quit() or a.exit() to quit the application.
-    // A not very useful example would be including
-    // #include <QTimer>
-    // near the top of the file and calling
-    // QTimer::singleShot(5000, &a, &QCoreApplication::quit);
-    // which quits the application after 5 seconds.
+    std::string input;
+    int choice;
 
-    // If you do not need a running Qt event loop, remove the call
-    // to a.exec() or use the Non-Qt Plain C++ Application template.
+    while(true) {
+        std::cout << "start\n";
+        std::cout << "1. encrypt\n";
+        std::cout << "2. decrypt\n";
+        std::cout << "3. exit\n";
+        std::cout << "choose: ";
 
-    return a.exec();
+        std::cin >> choice;
+
+        if(choice == 3) {
+            std::cout << "exit!\n";
+            break;
+        }
+
+        if(choice != 1 && choice != 2) {
+            std::cout << "try again.\n";
+            continue;
+        }
+
+        // Получаем путь к папке
+        std::cout << "path folder: ";
+        std::cin.ignore(); // очищаем буфер
+        std::getline(std::cin, input);
+        QString folderPath = QString::fromStdString(input);
+
+        // Получаем пароль
+        std::cout << "password: ";
+        std::getline(std::cin, input);
+        QString password = QString::fromStdString(input);
+
+        // Определяем режим
+        bool encryptMode = (choice == 1);
+
+        std::cout << (encryptMode ? "\nencription..." : "\ndecryption...") << std::endl;
+
+        // Генерируем ключ
+        QByteArray key = CryptoManager::getInstance().keyFromPassword(password);
+
+        std::cout << "key_1.\n";
+        // Запускаем сканер
+        FolderScanner scanner;
+        std::cout << "Calling processDirectory with: " << folderPath.toStdString() << std::endl;
+        bool result = scanner.processDirectory(folderPath, key, encryptMode);
+        std::cout << "processDirectory returned: " << result << std::endl;
+
+        if(result)
+        {
+            std::cout << "sucsess!\n";
+        }
+        else
+        {
+            std::cout << "erorr!\n";
+        }
+    }
+    return 0;
 }
