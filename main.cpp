@@ -1,50 +1,70 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include "folderscanner.h"
+#include "CryptoManager.h"
+#include <iostream>
 
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    if (argc != 4)
-    {
-        qInfo() << "Использование: <шифрование/расшифрование> <путь к папке> <пароль>";
-        return 1;
-    }
+    std::string input;
+    int choice;
 
-    QString mode = QString(argv[1]).toLower();
-    QString folderPath = QString(argv[2]);
-    QString password = QString(argv[3]);
+    while(true) {
+        std::cout << "start\n";
+        std::cout << "1. encrypt\n";
+        std::cout << "2. decrypt\n";
+        std::cout << "3. exit\n";
+        std::cout << "choose: ";
 
-    bool encryptMode;
-    if (mode == "шифрование")
-    {
-        encryptMode = true;
-    }
-    else if (mode == "расшифрование")
-    {
-        encryptMode = false;
-    }
-    else
-    {
-        qCritical() << "не правильно выбран режим";
-        return 1;
-    }
+        std::cin >> choice;
 
-    QByteArray key = CryptoManager::getInstance().keyFromPassword(password);
+        if(choice == 3) {
+            std::cout << "exit!\n";
+            break;
+        }
 
-    FolderScanner scanner;
-    bool result = scanner.processDirecoryr(folderPath, key, encryptMode);
+        if(choice != 1 && choice != 2) {
+            std::cout << "try again.\n";
+            continue;
+        }
 
-    if (result)
-    {
-        qInfo() << "операция выполнена успешно";
-        return 0;
+        // Получаем путь к папке
+        std::cout << "path folder: ";
+        std::cin.ignore(); // очищаем буфер
+        std::getline(std::cin, input);
+        QString folderPath = QString::fromStdString(input);
+
+        // Получаем пароль
+        std::cout << "password: ";
+        std::getline(std::cin, input);
+        QString password = QString::fromStdString(input);
+
+        // Определяем режим
+        bool encryptMode = (choice == 1);
+
+        std::cout << (encryptMode ? "\nencription..." : "\ndecryption...") << std::endl;
+
+        // Генерируем ключ
+        QByteArray key = CryptoManager::getInstance().keyFromPassword(password);
+
+        std::cout << "key_1.\n";
+        // Запускаем сканер
+        FolderScanner scanner;
+        std::cout << "Calling processDirectory with: " << folderPath.toStdString() << std::endl;
+        bool result = scanner.processDirectory(folderPath, key, encryptMode);
+        std::cout << "processDirectory returned: " << result << std::endl;
+
+        if(result)
+        {
+            std::cout << "sucsess!\n";
+        }
+        else
+        {
+            std::cout << "erorr!\n";
+        }
     }
-    else
-    {
-        qCritical() << "операция выполнена с ошибками";
-        return 1;
-    }
+    return 0;
 }

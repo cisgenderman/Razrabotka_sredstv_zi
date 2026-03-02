@@ -1,7 +1,7 @@
 #include "CryptoManager.h"
 #include <fstream>
 #include <iostream>
-
+#include <QCryptographicHash>
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
 #include <cryptopp/filters.h>
@@ -19,31 +19,50 @@ CryptoManager& CryptoManager::getInstance()
 
 QByteArray CryptoManager::keyFromPassword(const QString &password)
 {
-    // Преобразуем пароль в байтовый массив
+    std::cout << "DEBUG: keyFromPassword started" << std::endl;
     std::string pass = password.toStdString();
-    SecByteBlock key(AES::DEFAULT_KEYLENGTH); // 256 бит = 32 байта
+    std::cout << "DEBUG: pass size = " << pass.size() << std::endl;
 
-    // Используем SHA-256 для получения ключа фиксированной длины из пароля
-    SHA256().CalculateDigest(key, reinterpret_cast<const byte*>(pass.data()), pass.size());
+    SecByteBlock key(AES::DEFAULT_KEYLENGTH);
+    std::cout << "DEBUG: SecByteBlock created, size = " << key.size() << std::endl;
 
-    return QByteArray(reinterpret_cast<const char*>(key.data()), key.size());
+    try {
+        SHA256().CalculateDigest(key, reinterpret_cast<const byte*>(pass.data()), pass.size());
+        std::cout << "DEBUG: SHA256 calculated" << std::endl;
+    } catch (const std::exception& e) {
+        std::cout << "DEBUG: Exception: " << e.what() << std::endl;
+    }
+
+    QByteArray result(reinterpret_cast<const char*>(key.data()), key.size());
+    std::cout << "DEBUG: keyFromPassword finished" << std::endl;
+    return result;
 }
 
 bool CryptoManager::processAES(const QString &inputFilePath, const QString &outputFilePath,
                                const QByteArray &key, bool forEncryption) {
+    std::cout << "DEBUG: processAES started" << std::endl;
+    std::cout << "DEBUG: input file: " << inputFilePath.toStdString() << std::endl;
+    std::cout << "DEBUG: output file: " << outputFilePath.toStdString() << std::endl;
+    std::cout << "DEBUG: key size: " << key.size() << std::endl;
+
     try {
         std::string inFile = inputFilePath.toStdString();
         std::string outFile = outputFilePath.toStdString();
 
-        // Устанавливаем ключ и вектор инициализации (IV)
-        // Внимание: В реальных проектах IV должен быть случайным и сохраняться!
-        // Для упрощения лабораторной используем фиксированный IV (небезопасно!)
-        byte iv[AES::BLOCKSIZE] = {0}; // В реальности должен быть случайным
+        // Проверяем, существует ли входной файл
+        std::ifstream test(inFile);
+        if (!test.good()) {
+            std::cout << "DEBUG: Input file does not exist!" << std::endl;
+            return false;
+        }
+        test.close();
 
+        byte iv[AES::BLOCKSIZE] = {0};
         SecByteBlock keyBlock(reinterpret_cast<const byte*>(key.data()), key.size());
 
+        std::cout << "DEBUG: Starting Crypto++ operation..." << std::endl;
+
         if (forEncryption) {
-            // Шифрование
             CBC_Mode<AES>::Encryption encryptor;
             encryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
 
@@ -53,7 +72,6 @@ bool CryptoManager::processAES(const QString &inputFilePath, const QString &outp
                                                          )
                           );
         } else {
-            // Дешифрование
             CBC_Mode<AES>::Decryption decryptor;
             decryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
 
@@ -63,17 +81,28 @@ bool CryptoManager::processAES(const QString &inputFilePath, const QString &outp
                                                          )
                           );
         }
+
+        std::cout << "DEBUG: Crypto++ operation completed" << std::endl;
         return true;
+
     } catch (const CryptoPP::Exception& e) {
-        std::cerr << "Crypto++ error: " << e.what() << std::endl;
+        std::cout << "DEBUG: Crypto++ error: " << e.what() << std::endl;
+        return false;
+    } catch (const std::exception& e) {
+        std::cout << "DEBUG: std exception: " << e.what() << std::endl;
+        return false;
+    } catch (...) {
+        std::cout << "DEBUG: Unknown exception" << std::endl;
         return false;
     }
 }
 
-bool CryptoManager::encryptFile(const QString &inputFilePath, const QString &outputFilePath, const QByteArray &key) {
+bool CryptoManager::encryptFile(const QString &inputFilePath, const QString &outputFilePath, const QByteArray &key)
+{
     return processAES(inputFilePath, outputFilePath, key, true);
 }
 
-bool CryptoManager::decryptFile(const QString &inputFilePath, const QString &outputFilePath, const QByteArray &key) {
+bool CryptoManager::decryptFile(const QString &inputFilePath, const QString &outputFilePath, const QByteArray &key)
+{
     return processAES(inputFilePath, outputFilePath, key, false);
 }
