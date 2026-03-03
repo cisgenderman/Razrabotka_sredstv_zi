@@ -40,54 +40,73 @@ QByteArray CryptoManager::keyFromPassword(const QString &password)
 }
 
 bool CryptoManager::processAES(const QString &inputFilePath, const QString &outputFilePath,
-                               const QByteArray &key, bool forEncryption) {
+                               const QByteArray &key, bool forEncryption)
+{
     std::cout << "DEBUG: processAES started" << std::endl;
     std::cout << "DEBUG: input file: " << inputFilePath.toStdString() << std::endl;
     std::cout << "DEBUG: output file: " << outputFilePath.toStdString() << std::endl;
     std::cout << "DEBUG: key size: " << key.size() << std::endl;
 
     QString tempFile = inputFilePath + ".tmp";
-    try {
-        std::string inFile = inputFilePath.toStdString();
-        std::string tempFileStr = tempFile.toStdString();
 
+    try {
 
         // Проверяем, существует ли входной файл
-        if (!QFile::exists(inputFilePath))
+        QFile inFile(inputFilePath);
+        if (!inFile.open(QIODevice::ReadOnly))
         {
-            std::cout << "DEBUG: Input file does not exist!" << std::endl;
+            std::cout << "DEBUG: Cannot open input fil" << std::endl;
             return false;
         }
+
+        QByteArray fileData = inFile.readAll();
+        inFile.close();
 
         byte iv[AES::BLOCKSIZE] = {0};
         SecByteBlock keyBlock(reinterpret_cast<const byte*>(key.data()), key.size());
 
         std::cout << "DEBUG: Starting Crypto++ operation..." << std::endl;
 
+        std::string encrypted;
+
         if (forEncryption)
         {
             CBC_Mode<AES>::Encryption encryptor;
             encryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
 
-            FileSource fs(inFile.c_str(), true,
-                          new StreamTransformationFilter(encryptor,
-                                                         new FileSink(tempFileStr.c_str())
-                                                         )
-                          );
+            StringSource(
+                std::string(fileData.constData(), fileData.size()),
+                true,
+                new StreamTransformationFilter(encryptor,
+                                               new StringSink(encrypted)
+                                               )
+                );
         }
         else
         {
             CBC_Mode<AES>::Decryption decryptor;
             decryptor.SetKeyWithIV(keyBlock, keyBlock.size(), iv);
 
-            FileSource fs(inFile.c_str(), true,
-                          new StreamTransformationFilter(decryptor,
-                                                         new FileSink(tempFileStr.c_str())
-                                                         )
-                          );
+            StringSource(
+                std::string(fileData.constData(), fileData.size()),
+                true,
+                new StreamTransformationFilter(decryptor,
+                                               new StringSink(encrypted)
+                                               )
+                );
         }
 
         std::cout << "DEBUG: Crypto++ operation completed" << std::endl;
+
+        QFile outFile(tempFile);
+        if (!outFile.open(QIODevice::WriteOnly))
+        {
+            std::cout << "DEBUG: Cannot open temp file for writing!" << std::endl;
+            return false;
+        }
+
+        outFile.write(encrypted.data(), encrypted.size());
+        outFile.close();
 
         // Заменяем исходный файл зашифрованным
         if (QFile::exists(tempFile))
