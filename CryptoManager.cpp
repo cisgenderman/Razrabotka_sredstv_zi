@@ -24,7 +24,8 @@ QByteArray CryptoManager::keyFromPassword(const QString &password)
     std::string pass = password.toStdString();
     std::cout << "DEBUG: pass size = " << pass.size() << std::endl;
 
-    SecByteBlock key(AES::DEFAULT_KEYLENGTH);
+    //SecByteBlock key(AES::DEFAULT_KEYLENGTH);
+    SecByteBlock key(32);
     std::cout << "DEBUG: SecByteBlock created, size = " << key.size() << std::endl;
 
     try {
