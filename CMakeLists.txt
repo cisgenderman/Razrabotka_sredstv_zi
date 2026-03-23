@@ -29,28 +29,19 @@ endif()
 
 target_link_libraries(lb1 PRIVATE Qt5::Core)
 
-# === Crypto++ library (ДИНАМИЧЕСКАЯ линковка как в тесте) ===
+# === Crypto++ library (СТАТИЧЕСКАЯ линковка) ===
 set(CRYPTOPP_INCLUDE_DIR "D:/program_files/Compiler/MSYS2/ucrt64/include")
-set(CRYPTOPP_LIBRARY "D:/program_files/Compiler/MSYS2/ucrt64/lib/libcryptopp.dll.a")  # ИЗМЕНЕНО на .dll.a!
+set(CRYPTOPP_LIBRARY "D:/program_files/Compiler/MSYS2/ucrt64/lib/libcryptopp.a")  # <-- статическая
 
 if(EXISTS ${CRYPTOPP_INCLUDE_DIR}/cryptopp/cryptlib.h)
     target_include_directories(lb1 PRIVATE ${CRYPTOPP_INCLUDE_DIR})
     target_link_libraries(lb1 PRIVATE ${CRYPTOPP_LIBRARY})
-
-    # Копирование всех необходимых DLL (как в тесте)
-    add_custom_command(TARGET lb1 POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "D:/program_files/Compiler/MSYS2/ucrt64/bin/libcryptopp.dll"
-            "D:/program_files/Compiler/MSYS2/ucrt64/bin/libgcc_s_seh-1.dll"
-            "D:/program_files/Compiler/MSYS2/ucrt64/bin/libstdc++-6.dll"
-            "D:/program_files/Compiler/MSYS2/ucrt64/bin/libwinpthread-1.dll"
-            $<TARGET_FILE_DIR:lb1>
-        COMMENT "Copying all required DLLs to output directory"
-    )
-
-    message(STATUS "Crypto++ found from UCRT64: ${CRYPTOPP_LIBRARY}")
+    message(STATUS "Crypto++ static library added")
 else()
-    message(FATAL_ERROR "Crypto++ not found! Check path: ${CRYPTOPP_INCLUDE_DIR}")
+    message(FATAL_ERROR "Crypto++ headers not found!")
 endif()
 
-# Удалены ws2_32 и pthread — для динамической линковки они не нужны!
+# Для статической линковки на Windows нужны системные библиотеки
+if(WIN32 AND MINGW)
+    target_link_libraries(lb1 PRIVATE ws2_32 pthread)
+endif()
